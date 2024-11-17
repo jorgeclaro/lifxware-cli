@@ -1,0 +1,34 @@
+{
+	"name": "lifxware-cli",
+	"description": "Example of CLI using LIFXware library",
+	"author": "Jorge Claro <jmc.claro@gmail.com>",
+	"license": "MIT",
+	"type": "module",
+	"dependencies": {
+		"@types/cli-table": "0.3.0",
+		"@types/lodash": "4.17.13",
+		"@types/node": "22.9.0",
+		"cli-table": "0.3.11",
+		"inquirer": "12.1.0",
+		"lifxware": "0.1.25",
+		"lodash": "4.17.21"
+	},
+	"scripts": {
+		"cli": "npx tsx src/cli.ts",
+		"lint": "npx eslint",
+		"lint:fix": "npx eslint --fix"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jorgeclaro/lifxware-cli.git"
+	},
+	"devDependencies": {
+		"@eslint/json": "0.6.0",
+		"@eslint/markdown": "6.2.1",
+		"@typescript-eslint/eslint-plugin": "8.14.0",
+		"@typescript-eslint/parser": "8.14.0",
+		"eslint": "9.15.0",
+		"tsx": "4.19.2",
+		"typescript": "5.6.3"
+	}
+}
