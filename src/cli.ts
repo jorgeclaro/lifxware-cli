@@ -130,8 +130,6 @@ async function colorMenu() {
 }
 
 async function waveformMenu() {
-	
-
 	const answers = await inquirer.prompt([
 		{
 			type: 'boolean',
@@ -298,9 +296,15 @@ async function mainMenu() {
 	}
 }
 
-async function errorHandler(err: Error) {
+function errorHandler(err: Error) {
 	console.error(err);
+}
+
+function signalHandler(){
+	process.exit(0);
 }
 
 process.on('uncaughtException', errorHandler);
 process.on('unhandledRejection', errorHandler);
+process.on('SIGINT', signalHandler);
+process.on('SIGTERM', signalHandler);
