@@ -2,7 +2,7 @@ import inquirer from 'inquirer';
 import Table from 'cli-table';
 import { Client, ClientEvents } from 'lifxware';
 import { Light } from 'lifxware/dist/light';
-import { WaveformType } from 'lifxware/dist/packets/waveform/waveform';
+import { WaveformRequest, WaveformType } from 'lifxware/dist/packets/waveform/waveform';
 
 const client = new Client({ debug: false });
 
@@ -207,7 +207,7 @@ async function waveformMenu() {
 			throw Error('Unknown Waveform');
 	}
 
-	const waveform = {
+	const waveformReq: WaveformRequest = {
 		isTransient: answers.isTransient,
 		color: {
 			hue: answers.hue,
@@ -221,7 +221,7 @@ async function waveformMenu() {
 		waveform: waveformType
 	};
 
-	return waveform;
+	return waveformReq;
 }
 
 // eslint-disable-next-line complexity
