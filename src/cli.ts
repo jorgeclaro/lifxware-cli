@@ -61,7 +61,7 @@ async function printLightsState(lights: Light[]) {
 	console.info(table.toString());
 }
 
-async function lightsMenu() {
+async function lightsMenu(singleLight?: boolean) {
 	const lights = client.lights();
 	const lightIds = [];
 
@@ -69,7 +69,9 @@ async function lightsMenu() {
 		lightIds.push(light.id);
 	}
 
-	lightIds.push('All');
+	if (!singleLight) {
+		lightIds.push('All')
+	}
 
 	const lightAnswer = await inquirer.prompt({
 		type: 'list',
@@ -85,6 +87,16 @@ async function lightsMenu() {
 	const light = client.light(lightAnswer.lightId);
 
 	return [light];
+}
+
+async function labelMenu() {
+	const labelAnswer = await inquirer.prompt({
+		type: 'input',
+		name: 'label',
+		message: 'Label?',
+	});
+
+	return labelAnswer.label;
 }
 
 async function powerMenu() {
@@ -230,7 +242,7 @@ async function mainMenu() {
 		type: 'list',
 		name: 'client',
 		message: 'What to do?',
-		choices: ['GetLightList', 'GetLightState', 'SetLightPower', 'SetLightColor', 'SetWaveform', 'Exit']
+		choices: ['GetLightList', 'GetLightState', 'SetLightLabel', 'SetLightPower', 'SetLightColor', 'SetWaveform', 'Exit']
 	});
 
 	switch (answers.client) {
@@ -248,6 +260,16 @@ async function mainMenu() {
 			}
 
 			mainMenu();
+			break;
+		case 'SetLightLabel':
+			try {
+				const light = (await lightsMenu(true))[0];
+				const label = await labelMenu();
+
+				await light.setLabel({label});
+			} catch (err) {
+				console.error(err);
+			}
 			break;
 		case 'SetLightPower':
 			try {

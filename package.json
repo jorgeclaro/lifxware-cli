@@ -7,7 +7,7 @@
 	"dependencies": {
 		"cli-table": "0.3.11",
 		"inquirer": "12.1.0",
-		"lifxware": "0.1.28",
+		"lifxware": "0.1.29",
 		"lodash": "4.17.21"
 	},
 	"scripts": {
