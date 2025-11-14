@@ -1,10 +1,13 @@
-import inquirer from 'inquirer';
-import Table from 'cli-table';
+import SimpleTable from 'cli-simple-table';
+import { input, number, select } from '@inquirer/prompts';
 import { Client, ClientEvents } from 'lifxware';
 import { Light } from 'lifxware/dist/light';
 import { WaveformRequest, WaveformType } from 'lifxware/dist/packets/waveform/waveform';
 
-const client = new Client({ debug: false });
+const client = new Client({
+	startDiscovery: true,
+	debug: false
+});
 
 client.on(ClientEvents.LISTENING, async () => {
 	const address = client.getAddress();
@@ -23,20 +26,18 @@ function printLights() {
 
 	const lights = client.lights();
 
-	const table = new Table({
-		head: ['Id', 'Label', 'Address', 'Port', 'Legacy', 'Connectivity'],
-		colWidths: [20, 20, 20, 15, 15, 15]
-	});
+	const table = new SimpleTable();
+	table.header('Id', 'Label', 'Address', 'Port', 'Legacy', 'Connectivity');
 
 	for (const light of lights) {
-		table.push([
+		table.row(
 			light.id,
 			light.label,
 			light.address,
-			light.port,
+			light.port ? light.port.toString() : 'N/A',
 			light.legacy ? 'true' : 'false',
 			light.connectivity ? 'online' : 'offline'
-		]);
+		);
 	}
 
 	console.info(table.toString());
@@ -49,13 +50,12 @@ async function printLightsState(lights: Light[]) {
 		await light.getState();
 	}
 
-	const table = new Table({
-		head: ['Id', 'Connectivity', 'Power', 'Color'],
-		colWidths: [20, 15, 15, 70]
-	});
+	const table = new SimpleTable();
+	table.header('Id', 'Connectivity', 'Power', 'Color');
+
 
 	for (const light of lights) {
-		table.push([light.id, light.connectivity, light.power ? 'on' : 'off', JSON.stringify(light.color)]);
+		table.row(light.id, light.connectivity ? 'online' : 'offline', light.power ? 'on' : 'off', JSON.stringify(light.color));
 	}
 
 	console.info(table.toString());
@@ -63,6 +63,11 @@ async function printLightsState(lights: Light[]) {
 
 async function lightsMenu(singleLight?: boolean) {
 	const lights = client.lights();
+
+	if (lights.length === 0) {
+		throw Error('No lights found');
+	}
+
 	const lightIds = [];
 
 	for (const light of lights) {
@@ -73,164 +78,158 @@ async function lightsMenu(singleLight?: boolean) {
 		lightIds.push('All')
 	}
 
-	const lightAnswer = await inquirer.prompt({
-		type: 'list',
-		name: 'lightId',
+	const lightAnswer: string = await select({
 		message: 'What light?',
 		choices: lightIds
 	});
 
-	if (lightAnswer.lightId === 'All') {
+	if (lightAnswer === 'All') {
 		return client.lights();
 	}
 
-	const light = client.light(lightAnswer.lightId);
+	const light = client.light(lightAnswer);
 
 	return [light];
 }
 
 async function labelMenu() {
-	const labelAnswer = await inquirer.prompt({
-		type: 'input',
-		name: 'label',
+	const labelAnswer = await input({
 		message: 'Label?',
 	});
 
-	return labelAnswer.label;
+	return labelAnswer;
 }
 
 async function powerMenu() {
-	const powerAnswer = await inquirer.prompt({
-		type: 'list',
-		name: 'power',
+	const powerAnswer = await select({
 		message: 'What power?',
 		choices: ['on', 'off']
 	});
 
-	return powerAnswer.power === 'on';
+	return powerAnswer === 'on';
 }
 
 async function colorMenu() {
-	const answers = await inquirer.prompt( [
-		{
-			type: 'number',
-			name: 'hue',
-			message: 'hue?',
-			default: 0
-		},
-		{
-			type: 'number',
-			name: 'saturation',
-			message: 'saturation?',
-			default: 50
-		},
-		{
-			type: 'number',
-			name: 'brightness',
-			message: 'brightness?',
-			default: 50
-		},
-		{
-			type: 'number',
-			name: 'kelvin',
-			message: 'kelvin?',
-			default: 3500
-		}
-	]);
+	const hue = await number({
+		message: 'hue?',
+		default: 0,
+		required: true
+	});
+
+	const saturation = await number({
+		message: 'saturation?',
+		default: 50,
+		required: true
+	});
+
+	const brightness = await number({
+		message: 'brightness?',
+		default: 50,
+		required: true
+	});
+
+	const kelvin = await number({
+		message: 'kelvin?',
+		default: 3500,
+		required: true
+	});
+
+	const answers = {
+		hue,
+		saturation,
+		brightness,
+		kelvin
+	};
 
 	return answers;
 }
 
 async function waveformMenu() {
-	const answers = await inquirer.prompt([
-		{
-			type: 'boolean',
-			name: 'isTransient',
-			message: 'Is Transient?',
-			default: false
-		},
-		{
-			type: 'number',
-			name: 'hue',
-			message: 'hue?',
-			default: 0
-		},
-		{
-			type: 'number',
-			name: 'saturation',
-			message: 'saturation?',
-			default: 0
-		},
-		{
-			type: 'number',
-			name: 'brightness',
-			message: 'brightness?',
-			default: 100
-		},
-		{
-			type: 'number',
-			name: 'kelvin',
-			message: 'kelvin?',
-			default: 3500
-		},
-		{
-			type: 'number',
-			name: 'period',
-			message: 'Period?',
-			default: 1000
-		},
-		{
-			type: 'number',
-			name: 'cycles',
-			message: 'Cycles?',
-			default: 3
-		},
-		{
-			type: 'number',
-			name: 'skewRatio',
-			message: 'Skew Ratio?',
-			default: 0
-		},
-		{
-			type: 'list',
-			name: 'waveform',
-			message: 'Waveform?',
-			choices: ['SAW', 'SINE', 'HALF_SINE', 'TRIANGLE', 'PULSE']
-		}
-	] as any);
+	const isTransient = await select({
+		message: 'Is Transient?',
+		choices: ['true', 'false'],
+		default: 'false'
+	});
 
-	let waveformType: WaveformType;
+	const hue = await number({
+		message: 'hue?',
+		default: 0,
+		required: true
+	});
 
-	switch (answers.waveform) {
+	const saturation = await number({
+		message: 'saturation?',
+		default: 0,
+		required: true
+	});
+
+	const brightness = await number({
+		message: 'brightness?',
+		default: 100,
+		required: true
+	});
+
+	const kelvin = await number({
+		message: 'kelvin?',
+		default: 3500,
+		required: true
+	});
+
+	const period = await number({
+		message: 'Period?',
+		default: 1000,
+		required: true
+	});
+
+	const cycles = await number({
+		message: 'Cycles?',
+		default: 3,
+		required: true
+	});
+
+	const skewRatio = await number({
+		message: 'Skew Ratio?',
+		default: 0,
+		required: true
+	});
+
+	const waveformAns = await select({
+		message: 'Waveform?',
+		choices: ['SAW', 'SINE', 'HALF_SINE', 'TRIANGLE', 'PULSE'],
+	});
+
+	let waveform: WaveformType;
+
+	switch (waveformAns) {
 		case 'SAW':
-			waveformType = WaveformType.SAW;
+			waveform = WaveformType.SAW;
 			break;
 		case 'SINE':
-			waveformType = WaveformType.SINE;
+			waveform = WaveformType.SINE;
 			break;
 		case 'HALF_SINE':
-			waveformType = WaveformType.HALF_SINE;
+			waveform = WaveformType.HALF_SINE;
 			break;
 		case 'TRIANGLE':
-			waveformType = WaveformType.TRIANGLE;
+			waveform = WaveformType.TRIANGLE;
 		case 'PULSE':
-			waveformType = WaveformType.PULSE;
+			waveform = WaveformType.PULSE;
 		default:
 			throw Error('Unknown Waveform');
 	}
 
 	const waveformReq: WaveformRequest = {
-		isTransient: answers.isTransient,
+		isTransient: isTransient === 'true',
 		color: {
-			hue: answers.hue,
-			saturation: answers.saturation,
-			brightness: answers.brightness,
-			kelvin: answers.kelvin
+			hue,
+			saturation,
+			brightness,
+			kelvin
 		},
-		period: answers.period,
-		cycles: answers.cycles,
-		skewRatio: answers.skewRatio,
-		waveform: waveformType
+		period,
+		cycles,
+		skewRatio,
+		waveform,
 	};
 
 	return waveformReq;
@@ -238,14 +237,12 @@ async function waveformMenu() {
 
 // eslint-disable-next-line complexity
 async function mainMenu() {
-	const answers = await inquirer.prompt( {
-		type: 'list',
-		name: 'client',
+	const action = await select({
 		message: 'What to do?',
 		choices: ['GetLightList', 'GetLightState', 'SetLightLabel', 'SetLightPower', 'SetLightColor', 'SetWaveform', 'Exit']
 	});
 
-	switch (answers.client) {
+	switch (action) {
 		case 'GetLightList':
 			printLights();
 			mainMenu();
@@ -264,12 +261,14 @@ async function mainMenu() {
 		case 'SetLightLabel':
 			try {
 				const light = (await lightsMenu(true))[0];
+				console.info(`Current label: ${light.label}`);
 				const label = await labelMenu();
 
 				await light.setLabel({label});
 			} catch (err) {
 				console.error(err);
 			}
+			mainMenu();
 			break;
 		case 'SetLightPower':
 			try {
@@ -300,18 +299,21 @@ async function mainMenu() {
 			mainMenu();
 			break;
 		case 'SetWaveform':
-			const lights = await lightsMenu();
-			const waveform = await waveformMenu();
+			try {
+				const lights = await lightsMenu();
+				const waveform = await waveformMenu();
 
-			for (const light of lights) {
-				await light.setWaveform(waveform);
+				for (const light of lights) {
+					await light.setWaveform(waveform);
+				}
+			} catch (err) {
+				console.error(err);
 			}
 
 			mainMenu();
 			break;
 		case 'Exit':
 			process.exit(0);
-			break;
 		default:
 			console.error('Unknown option');
 			mainMenu();
