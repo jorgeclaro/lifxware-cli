@@ -8,11 +8,12 @@
 	"dependencies": {
 		"@inquirer/prompts": "7.10.1",
 		"cli-simple-table": "1.1.1",
-		"lifxware": "0.1.29",
+		"lifxware": "0.2.0",
 		"lodash": "4.17.21"
 	},
 	"scripts": {
 		"cli": "npx tsx src/cli.ts",
+		"test": "vitest run",
 		"lint": "npx eslint",
 		"lint:fix": "npx eslint --fix"
 	},
@@ -27,6 +28,7 @@
 		"@typescript-eslint/parser": "8.46.4",
 		"eslint": "9.39.1",
 		"tsx": "4.20.6",
-		"typescript": "5.9.3"
+		"typescript": "5.9.3",
+		"vitest": "^3.0.0"
 	}
 }

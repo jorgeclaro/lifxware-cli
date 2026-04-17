@@ -1,8 +1,8 @@
 import SimpleTable from 'cli-simple-table';
-import { input, number, select } from '@inquirer/prompts';
+import { select } from '@inquirer/prompts';
 import { Client, ClientEvents } from 'lifxware';
 import { Light } from 'lifxware/dist/light';
-import { WaveformRequest, WaveformType } from 'lifxware/dist/packets/waveform/waveform';
+import { colorMenu, hevCycleMenu, labelMenu, lightsMenu, powerMenu, relayIndexMenu, waveformMenu } from './menus';
 
 const client = new Client({
 	startDiscovery: true,
@@ -53,7 +53,6 @@ async function printLightsState(lights: Light[]) {
 	const table = new SimpleTable();
 	table.header('Id', 'Connectivity', 'Power', 'Color');
 
-
 	for (const light of lights) {
 		table.row(light.id, light.connectivity ? 'online' : 'offline', light.power ? 'on' : 'off', JSON.stringify(light.color));
 	}
@@ -61,185 +60,23 @@ async function printLightsState(lights: Light[]) {
 	console.info(table.toString());
 }
 
-async function lightsMenu(singleLight?: boolean) {
-	const lights = client.lights();
-
-	if (lights.length === 0) {
-		throw Error('No lights found');
-	}
-
-	const lightIds = [];
-
-	for (const light of lights) {
-		lightIds.push(light.id);
-	}
-
-	if (!singleLight) {
-		lightIds.push('All')
-	}
-
-	const lightAnswer: string = await select({
-		message: 'What light?',
-		choices: lightIds
-	});
-
-	if (lightAnswer === 'All') {
-		return client.lights();
-	}
-
-	const light = client.light(lightAnswer);
-
-	return [light];
-}
-
-async function labelMenu() {
-	const labelAnswer = await input({
-		message: 'Label?',
-	});
-
-	return labelAnswer;
-}
-
-async function powerMenu() {
-	const powerAnswer = await select({
-		message: 'What power?',
-		choices: ['on', 'off']
-	});
-
-	return powerAnswer === 'on';
-}
-
-async function colorMenu() {
-	const hue = await number({
-		message: 'hue?',
-		default: 0,
-		required: true
-	});
-
-	const saturation = await number({
-		message: 'saturation?',
-		default: 50,
-		required: true
-	});
-
-	const brightness = await number({
-		message: 'brightness?',
-		default: 50,
-		required: true
-	});
-
-	const kelvin = await number({
-		message: 'kelvin?',
-		default: 3500,
-		required: true
-	});
-
-	const answers = {
-		hue,
-		saturation,
-		brightness,
-		kelvin
-	};
-
-	return answers;
-}
-
-async function waveformMenu() {
-	const isTransient = await select({
-		message: 'Is Transient?',
-		choices: ['true', 'false'],
-		default: 'false'
-	});
-
-	const hue = await number({
-		message: 'hue?',
-		default: 0,
-		required: true
-	});
-
-	const saturation = await number({
-		message: 'saturation?',
-		default: 0,
-		required: true
-	});
-
-	const brightness = await number({
-		message: 'brightness?',
-		default: 100,
-		required: true
-	});
-
-	const kelvin = await number({
-		message: 'kelvin?',
-		default: 3500,
-		required: true
-	});
-
-	const period = await number({
-		message: 'Period?',
-		default: 1000,
-		required: true
-	});
-
-	const cycles = await number({
-		message: 'Cycles?',
-		default: 3,
-		required: true
-	});
-
-	const skewRatio = await number({
-		message: 'Skew Ratio?',
-		default: 0,
-		required: true
-	});
-
-	const waveformAns = await select({
-		message: 'Waveform?',
-		choices: ['SAW', 'SINE', 'HALF_SINE', 'TRIANGLE', 'PULSE'],
-	});
-
-	let waveform: WaveformType;
-
-	switch (waveformAns) {
-		case 'SAW':
-			waveform = WaveformType.SAW;
-			break;
-		case 'SINE':
-			waveform = WaveformType.SINE;
-			break;
-		case 'HALF_SINE':
-			waveform = WaveformType.HALF_SINE;
-			break;
-		case 'TRIANGLE':
-			waveform = WaveformType.TRIANGLE;
-		case 'PULSE':
-			waveform = WaveformType.PULSE;
-		default:
-			throw Error('Unknown Waveform');
-	}
-
-	const waveformReq: WaveformRequest = {
-		isTransient: isTransient === 'true',
-		color: {
-			hue,
-			saturation,
-			brightness,
-			kelvin
-		},
-		period,
-		cycles,
-		skewRatio,
-		waveform,
-	};
-
-	return waveformReq;
-}
-
 // eslint-disable-next-line complexity
 async function mainMenu() {
 	const action = await select({
 		message: 'What to do?',
-		choices: ['GetLightList', 'GetLightState', 'SetLightLabel', 'SetLightPower', 'SetLightColor', 'SetWaveform', 'Exit']
+		choices: [
+			'GetLightList',
+			'GetLightState',
+			'SetLightLabel',
+			'SetLightPower',
+			'SetLightColor',
+			'SetWaveform',
+			'GetRelayPower',
+			'SetRelayPower',
+			'GetHevCycle',
+			'SetHevCycle',
+			'Exit',
+		]
 	});
 
 	switch (action) {
@@ -249,22 +86,19 @@ async function mainMenu() {
 			break;
 		case 'GetLightState':
 			try {
-				const lights = await lightsMenu();
-
+				const lights = await lightsMenu(client);
 				await printLightsState(lights);
 			} catch (err) {
 				console.error(err);
 			}
-
 			mainMenu();
 			break;
 		case 'SetLightLabel':
 			try {
-				const light = (await lightsMenu(true))[0];
+				const light = (await lightsMenu(client, true))[0];
 				console.info(`Current label: ${light.label}`);
 				const label = await labelMenu();
-
-				await light.setLabel({label});
+				await light.setLabel({ label });
 			} catch (err) {
 				console.error(err);
 			}
@@ -272,44 +106,84 @@ async function mainMenu() {
 			break;
 		case 'SetLightPower':
 			try {
-				const lights = await lightsMenu();
+				const lights = await lightsMenu(client);
 				const power = await powerMenu();
-
 				for (const light of lights) {
 					await light.setPower(power);
 				}
 			} catch (err) {
 				console.error(err);
 			}
-
 			mainMenu();
 			break;
 		case 'SetLightColor':
 			try {
-				const lights = await lightsMenu();
+				const lights = await lightsMenu(client);
 				const color = await colorMenu();
-
 				for (const light of lights) {
 					await light.setColor(color.hue, color.saturation, color.brightness, color.kelvin);
 				}
 			} catch (err) {
 				console.error(err);
 			}
-
 			mainMenu();
 			break;
 		case 'SetWaveform':
 			try {
-				const lights = await lightsMenu();
+				const lights = await lightsMenu(client);
 				const waveform = await waveformMenu();
-
 				for (const light of lights) {
 					await light.setWaveform(waveform);
 				}
 			} catch (err) {
 				console.error(err);
 			}
-
+			mainMenu();
+			break;
+		case 'GetRelayPower':
+			try {
+				const light = (await lightsMenu(client, true))[0];
+				const relayIndex = await relayIndexMenu();
+				const state = await light.getRelayPower(relayIndex);
+				console.info(`Relay ${state.relayIndex}: ${state.level > 0 ? 'on' : 'off'} (level: ${state.level})`);
+			} catch (err) {
+				console.error(err);
+			}
+			mainMenu();
+			break;
+		case 'SetRelayPower':
+			try {
+				const lights = await lightsMenu(client);
+				const relayIndex = await relayIndexMenu();
+				const power = await powerMenu();
+				for (const light of lights) {
+					await light.setRelayPower(relayIndex, power);
+				}
+			} catch (err) {
+				console.error(err);
+			}
+			mainMenu();
+			break;
+		case 'GetHevCycle':
+			try {
+				const light = (await lightsMenu(client, true))[0];
+				const state = await light.getHevCycle();
+				console.info(`HEV cycle — duration: ${state.durationS}s, remaining: ${state.remainingS}s, last power: ${state.lastPower ? 'on' : 'off'}`);
+			} catch (err) {
+				console.error(err);
+			}
+			mainMenu();
+			break;
+		case 'SetHevCycle':
+			try {
+				const lights = await lightsMenu(client);
+				const hevCycle = await hevCycleMenu();
+				for (const light of lights) {
+					await light.setHevCycle(hevCycle);
+				}
+			} catch (err) {
+				console.error(err);
+			}
 			mainMenu();
 			break;
 		case 'Exit':
@@ -324,7 +198,7 @@ function errorHandler(err: Error) {
 	console.error(err);
 }
 
-function signalHandler(){
+function signalHandler() {
 	process.exit(0);
 }
 
